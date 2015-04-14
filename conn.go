@@ -76,7 +76,7 @@ type Frame struct {
 	Data []byte
 }
 
-// GobConn wraps a connection which communicates using gob
+// GobConn wraps net.Conn which communicates using gob
 type GobConn struct {
 	// store the net.Conn to SetDeadlines
 	conn net.Conn
@@ -89,12 +89,14 @@ type GobConn struct {
 	enc *gob.Encoder
 	dec *gob.Decoder
 
+	// Store receivers for Frames
 	Receivers map[uint8]Receiver
 
 	// allow of users and ourselves to listen for shutdown
 	ShutdownCh chan struct{}
 	isShutdown bool
 
+	// timeout for receiving frames
 	timeout time.Duration
 }
 
