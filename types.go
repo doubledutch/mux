@@ -30,9 +30,9 @@ const (
 	SignalType
 )
 
-// Server wraps GobConn, adding Done
+// Server wraps Conn, adding Done
 type Server struct {
-	*GobConn
+	Conn
 }
 
 // NewServer returns a new server
@@ -40,7 +40,7 @@ func NewServer(conn net.Conn) *Server {
 	gc := NewGobConn(conn)
 
 	return &Server{
-		GobConn: gc,
+		Conn: gc,
 	}
 }
 
@@ -56,9 +56,9 @@ func (s *Server) Done(err error) {
 	s.Send(ErrType, errStr)
 }
 
-// Client wraps GobConn, adding Wait
+// Client wraps Conn, adding Wait
 type Client struct {
-	*GobConn
+	Conn
 	errCh chan string
 }
 
@@ -66,7 +66,6 @@ type Client struct {
 func NewClient(conn net.Conn) *Client {
 	gc := NewGobConn(conn)
 	errCh := make(chan string, 1)
-
 	errR := StringReceiver{
 		dec: NewDecoder(),
 		ch:  errCh,
@@ -75,8 +74,8 @@ func NewClient(conn net.Conn) *Client {
 	gc.Receive(ErrType, errR)
 
 	return &Client{
-		GobConn: gc,
-		errCh:   errCh,
+		Conn:  gc,
+		errCh: errCh,
 	}
 }
 
