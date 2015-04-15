@@ -98,10 +98,21 @@ type GobConn struct {
 
 	// timeout for receiving frames
 	timeout time.Duration
+
+	logger *log.Logger
 }
 
-// NewGobConn returns a new gob connection using a ReadWriter
-func NewGobConn(conn net.Conn) *GobConn {
+// NewDefaultGobConn returns a new GobConn using net.Conn and DefaultConfig
+func NewDefaultGobConn(conn net.Conn) (*GobConn, error) {
+	return NewGobConn(conn, DefaultConfig())
+}
+
+// NewGobConn creates a new GobConn using the specified conn and config
+func NewGobConn(conn net.Conn, config *Config) (*GobConn, error) {
+	if err := config.Verify(); err != nil {
+		return nil, err
+	}
+
 	return &GobConn{
 		conn: conn,
 
@@ -114,8 +125,9 @@ func NewGobConn(conn net.Conn) *GobConn {
 		Receivers:  make(map[uint8]Receiver),
 		ShutdownCh: make(chan struct{}),
 
-		timeout: 100 * time.Millisecond,
-	}
+		timeout: config.Timeout,
+		logger:  log.New(config.LogOutput, "", log.LstdFlags),
+	}, nil
 }
 
 // Send encodes a frame on conn using t and e
@@ -133,6 +145,7 @@ func (c *GobConn) Send(t uint8, e interface{}) error {
 		Type: t,
 		Data: d,
 	}
+	c.logger.Printf("[DEBUG] Sending frame: %v\n", f)
 
 	return c.enc.Encode(f)
 }
@@ -146,6 +159,7 @@ type Receiver interface {
 // Receive registers a receiver to receive t
 func (c *GobConn) Receive(t uint8, r Receiver) {
 	c.Receivers[t] = r
+	c.logger.Printf("[DEBUG] Added receiver type %d\n", t)
 }
 
 // Recv listens for frames and sends them to a receiver
@@ -171,9 +185,10 @@ func (c *GobConn) Recv() {
 				return
 			}
 		}
+		c.logger.Printf("[DEBUG] Received frame: %v\n", frame)
 		r, ok := c.Receivers[frame.Type]
 		if !ok {
-			log.Printf("[WARN] dropping frame %d\n", frame.Type)
+			c.logger.Printf("[WARN] dropping frame %d\n", frame.Type)
 			continue
 		}
 		err = r.Receive(frame.Data)
@@ -193,6 +208,7 @@ func (c *GobConn) Shutdown() {
 	if c.isShutdown {
 		return
 	}
+	c.logger.Println("[INFO] Shutting down")
 	c.isShutdown = true
 	// Notify that we're shutdown
 	close(c.ShutdownCh)
