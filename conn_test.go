@@ -18,6 +18,7 @@ package mux
 
 import (
 	"net"
+	"os"
 	"testing"
 	"time"
 )
@@ -39,7 +40,10 @@ func TestGobConnection(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		gConn := NewGobConn(conn)
+		gConn, err := NewDefaultGobConn(conn)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		dec := NewDecoder()
 		recvr := make(chan string, 1)
@@ -61,7 +65,10 @@ func TestGobConnection(t *testing.T) {
 	// client
 	conn, err := net.Dial("tcp", l.Addr().String())
 
-	gConn := NewGobConn(conn)
+	gConn, err := NewDefaultGobConn(conn)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	dec := NewDecoder()
 	recvr := make(chan string, 1)
@@ -102,7 +109,10 @@ func TestShutdown(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gConn := NewGobConn(conn)
+	gConn, err := NewDefaultGobConn(conn)
+	if err != nil {
+		t.Fatal(err)
+	}
 	gConn.Shutdown()
 	gConn.Shutdown()
 }
@@ -126,8 +136,13 @@ func TestTimeoutSend(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		gConn := NewGobConn(conn)
-		gConn.timeout = timeout
+		gConn, err := NewGobConn(conn, &Config{
+			Timeout:   timeout,
+			LogOutput: os.Stderr,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		recvr := make(chan string, 1)
 
@@ -145,8 +160,13 @@ func TestTimeoutSend(t *testing.T) {
 	// client
 	conn, err := net.Dial("tcp", l.Addr().String())
 
-	gConn := NewGobConn(conn)
-	gConn.timeout = timeout
+	gConn, err := NewGobConn(conn, &Config{
+		Timeout:   timeout,
+		LogOutput: os.Stderr,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	recvr := make(chan string, 1)
 	strR := NewStringReceiver(recvr)
@@ -174,15 +194,20 @@ func TestDroppedMessages(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-
-		gConn := NewGobConn(conn)
+		gConn, err := NewDefaultGobConn(conn)
+		if err != nil {
+			t.Fatal(err)
+		}
 		go gConn.Recv()
 	}()
 
 	// client
 	conn, err := net.Dial("tcp", l.Addr().String())
 
-	gConn := NewGobConn(conn)
+	gConn, err := NewDefaultGobConn(conn)
+	if err != nil {
+		t.Fatal(err)
+	}
 	gConn.Send(LogType, "asdf")
 	gConn.Send(LogType, "asdf")
 	gConn.Shutdown()
