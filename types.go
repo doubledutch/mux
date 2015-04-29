@@ -18,7 +18,10 @@ package mux
 
 import (
 	"errors"
+	"io"
 	"net"
+	"os"
+	"time"
 )
 
 const (
@@ -29,6 +32,43 @@ const (
 	// SignalType for signals
 	SignalType
 )
+
+var (
+	// ErrInvalidTimeout defines an error for an invalid Config Timeout value
+	ErrInvalidTimeout = errors.New("Invalid Config Timeout")
+	// ErrInvalidLogOutput defines an error for an invalid Config LogOutput value
+	ErrInvalidLogOutput = errors.New("Invalid LogOutput")
+)
+
+// Config configures a Server or Client
+type Config struct {
+	// Timeout for receiving frames
+	Timeout time.Duration
+
+	// LogOutput is used to control the log destination
+	LogOutput io.Writer
+}
+
+// Verify validates the config
+func (c *Config) Verify() error {
+	if c.Timeout == 0 {
+		return ErrInvalidTimeout
+	}
+
+	if c.LogOutput == nil {
+		return ErrInvalidLogOutput
+	}
+
+	return nil
+}
+
+// DefaultConfig creates config with default settings
+func DefaultConfig() *Config {
+	return &Config{
+		Timeout:   100 * time.Millisecond,
+		LogOutput: os.Stderr,
+	}
+}
 
 // Server wraps Conn, adding Done
 type Server interface {
@@ -41,13 +81,20 @@ type GobServer struct {
 	Conn
 }
 
-// NewGobServer creates a new GobServer
-func NewGobServer(conn net.Conn) Server {
-	gc := NewGobConn(conn)
+// NewDefaultServer creates a new Server with default configuration
+func NewDefaultServer(conn net.Conn) (Server, error) {
+	return NewGobServer(conn, DefaultConfig())
+}
 
+// NewGobServer creates a new GobServer
+func NewGobServer(conn net.Conn, config *Config) (Server, error) {
+	gc, err := NewGobConn(conn, config)
+	if err != nil {
+		return nil, err
+	}
 	return &GobServer{
 		Conn: gc,
-	}
+	}, nil
 }
 
 // Done sends err to client. This marks the end of the server's work
@@ -74,9 +121,18 @@ type GobClient struct {
 	errCh chan string
 }
 
+// NewDefaultClient creates a new client with default configuration
+func NewDefaultClient(conn net.Conn) (Client, error) {
+	return NewGobClient(conn, DefaultConfig())
+}
+
 // NewGobClient returns a new GobClient
-func NewGobClient(conn net.Conn) Client {
-	gc := NewGobConn(conn)
+func NewGobClient(conn net.Conn, config *Config) (Client, error) {
+	gc, err := NewGobConn(conn, config)
+	if err != nil {
+		return nil, err
+	}
+
 	errCh := make(chan string, 1)
 	errR := StringReceiver{
 		dec: NewDecoder(),
@@ -88,7 +144,7 @@ func NewGobClient(conn net.Conn) Client {
 	return &GobClient{
 		Conn:  gc,
 		errCh: errCh,
-	}
+	}, nil
 }
 
 // Wait waits for an error from Server then closes the connection.

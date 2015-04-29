@@ -40,7 +40,10 @@ func TestHappyClientServer(t *testing.T) {
 		logCh := make(chan string, 1)
 		logR := NewStringReceiver(logCh)
 
-		server := NewGobServer(conn)
+		server, err := NewDefaultServer(conn)
+		if err != nil {
+			t.Fatal(err)
+		}
 		server.Receive(LogType, logR)
 		go server.Recv()
 		actual := <-logCh
@@ -54,7 +57,10 @@ func TestHappyClientServer(t *testing.T) {
 	// client
 	conn, err := net.Dial("tcp", l.Addr().String())
 
-	client := NewGobClient(conn)
+	client, err := NewDefaultClient(conn)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	go client.Recv()
 
@@ -82,7 +88,10 @@ func TestClientServerErr(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		server := NewGobServer(conn)
+		server, err := NewDefaultServer(conn)
+		if err != nil {
+			t.Fatal(err)
+		}
 		go server.Recv()
 
 		server.Done(expectedErr)
@@ -90,8 +99,13 @@ func TestClientServerErr(t *testing.T) {
 
 	// client
 	conn, err := net.Dial("tcp", l.Addr().String())
-
-	client := NewGobClient(conn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := NewDefaultClient(conn)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	go client.Recv()
 
