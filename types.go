@@ -71,29 +71,35 @@ func DefaultConfig() *Config {
 }
 
 // Server wraps Conn, adding Done
-type Server struct {
+type Server interface {
+	Conn
+	Done(err error)
+}
+
+// GobServer is a server that uses GobConn
+type GobServer struct {
 	Conn
 }
 
 // NewDefaultServer creates a new Server with default configuration
-func NewDefaultServer(conn net.Conn) (*Server, error) {
-	return NewServer(conn, DefaultConfig())
+func NewDefaultServer(conn net.Conn) (Server, error) {
+	return NewGobServer(conn, DefaultConfig())
 }
 
-// NewServer creates a new Server
-func NewServer(conn net.Conn, config *Config) (*Server, error) {
+// NewGobServer creates a new GobServer
+func NewGobServer(conn net.Conn, config *Config) (Server, error) {
 	gc, err := NewGobConn(conn, config)
 	if err != nil {
 		return nil, err
 	}
-	return &Server{
+	return &GobServer{
 		Conn: gc,
 	}, nil
 }
 
 // Done sends err to client. This marks the end of the server's work
 // The server should not send further, the client may not receive it.
-func (s *Server) Done(err error) {
+func (s *GobServer) Done(err error) {
 	var errStr string
 	if err == nil {
 		errStr = ""
@@ -104,18 +110,24 @@ func (s *Server) Done(err error) {
 }
 
 // Client wraps Conn, adding Wait
-type Client struct {
+type Client interface {
+	Conn
+	Wait() error
+}
+
+// GobClient is a client that uses GobConn
+type GobClient struct {
 	Conn
 	errCh chan string
 }
 
 // NewDefaultClient creates a new client with default configuration
-func NewDefaultClient(conn net.Conn) (*Client, error) {
-	return NewClient(conn, DefaultConfig())
+func NewDefaultClient(conn net.Conn) (Client, error) {
+	return NewGobClient(conn, DefaultConfig())
 }
 
-// NewClient returns a new client
-func NewClient(conn net.Conn, config *Config) (*Client, error) {
+// NewGobClient returns a new GobClient
+func NewGobClient(conn net.Conn, config *Config) (Client, error) {
 	gc, err := NewGobConn(conn, config)
 	if err != nil {
 		return nil, err
@@ -129,7 +141,7 @@ func NewClient(conn net.Conn, config *Config) (*Client, error) {
 
 	gc.Receive(ErrType, errR)
 
-	return &Client{
+	return &GobClient{
 		Conn:  gc,
 		errCh: errCh,
 	}, nil
@@ -137,7 +149,7 @@ func NewClient(conn net.Conn, config *Config) (*Client, error) {
 
 // Wait waits for an error from Server then closes the connection.
 // When this returns, the server is done sending.
-func (c *Client) Wait() error {
+func (c *GobClient) Wait() error {
 	errStr := <-c.errCh
 
 	c.Shutdown()
