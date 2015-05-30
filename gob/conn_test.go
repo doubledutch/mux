@@ -1,17 +1,21 @@
-package mux
+package gob
 
 import (
 	"net"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/doubledutch/mux"
 )
 
-func TestGobConnection(t *testing.T) {
+func TestNetConnection(t *testing.T) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	pool := new(Pool)
 
 	logType := uint8(1)
 	errType := uint8(2)
@@ -24,18 +28,13 @@ func TestGobConnection(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		gConn, err := NewDefaultGobConn(conn)
+		gConn, err := NewDefaultNetConn(conn)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		dec := NewDecoder()
 		recvr := make(chan string, 1)
-
-		strR := StringReceiver{
-			dec: dec,
-			ch:  recvr,
-		}
+		strR := mux.NewReceiver(recvr, pool)
 		gConn.Receive(logType, strR)
 		go gConn.Recv()
 		actual := <-recvr
@@ -49,18 +48,13 @@ func TestGobConnection(t *testing.T) {
 	// client
 	conn, err := net.Dial("tcp", l.Addr().String())
 
-	gConn, err := NewDefaultGobConn(conn)
+	gConn, err := NewDefaultNetConn(conn)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	dec := NewDecoder()
 	recvr := make(chan string, 1)
-
-	strR := StringReceiver{
-		dec: dec,
-		ch:  recvr,
-	}
+	strR := mux.NewReceiver(recvr, pool)
 	gConn.Receive(errType, strR)
 	go gConn.Recv()
 
@@ -93,7 +87,7 @@ func TestShutdown(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gConn, err := NewDefaultGobConn(conn)
+	gConn, err := NewDefaultNetConn(conn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,6 +100,8 @@ func TestTimeoutSend(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	pool := new(Pool)
 
 	timeout := 1 * time.Millisecond
 
@@ -120,7 +116,7 @@ func TestTimeoutSend(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		gConn, err := NewGobConn(conn, &Config{
+		gConn, err := NewNetConn(conn, &mux.Config{
 			Timeout:   timeout,
 			LogOutput: os.Stderr,
 		})
@@ -130,7 +126,7 @@ func TestTimeoutSend(t *testing.T) {
 
 		recvr := make(chan string, 1)
 
-		strR := NewStringReceiver(recvr)
+		strR := mux.NewReceiver(recvr, pool)
 		gConn.Receive(logType, strR)
 		go gConn.Recv()
 		actual := <-recvr
@@ -144,7 +140,7 @@ func TestTimeoutSend(t *testing.T) {
 	// client
 	conn, err := net.Dial("tcp", l.Addr().String())
 
-	gConn, err := NewGobConn(conn, &Config{
+	gConn, err := NewNetConn(conn, &mux.Config{
 		Timeout:   timeout,
 		LogOutput: os.Stderr,
 	})
@@ -153,7 +149,7 @@ func TestTimeoutSend(t *testing.T) {
 	}
 
 	recvr := make(chan string, 1)
-	strR := NewStringReceiver(recvr)
+	strR := mux.NewReceiver(recvr, pool)
 	gConn.Receive(errType, strR)
 	go gConn.Recv()
 
@@ -178,7 +174,7 @@ func TestDroppedMessages(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		gConn, err := NewDefaultGobConn(conn)
+		gConn, err := NewDefaultNetConn(conn)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -188,11 +184,11 @@ func TestDroppedMessages(t *testing.T) {
 	// client
 	conn, err := net.Dial("tcp", l.Addr().String())
 
-	gConn, err := NewDefaultGobConn(conn)
+	gConn, err := NewDefaultNetConn(conn)
 	if err != nil {
 		t.Fatal(err)
 	}
-	gConn.Send(LogType, "asdf")
-	gConn.Send(LogType, "asdf")
+	gConn.Send(mux.LogType, "asdf")
+	gConn.Send(mux.LogType, "asdf")
 	gConn.Shutdown()
 }

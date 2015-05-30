@@ -2,19 +2,62 @@ package mux
 
 import (
 	"os"
+	"reflect"
 	"syscall"
 )
 
+type ValueReceiver struct {
+	dec BufferDecoder
+	ch  reflect.Value
+	t   reflect.Type
+}
+
+func NewReceiver(ch interface{}, pool Pool) Receiver {
+	v := reflect.TypeOf(ch)
+
+	if v.Kind() != reflect.Chan {
+		panic("Receiver requires a channel")
+	}
+
+	chV := reflect.ValueOf(ch)
+	t := reflect.TypeOf(ch).Elem()
+
+	return &ValueReceiver{
+		dec: pool.NewBufferDecoder(),
+		ch:  chV,
+		t:   t,
+	}
+}
+
+func (r *ValueReceiver) Receive(b []byte) error {
+	x := reflect.New(r.t)
+
+	r.dec.Write(b)
+	err := r.dec.Decode(x.Interface())
+	r.dec.Reset()
+	if err != nil {
+		return err
+	}
+
+	r.ch.Send(x.Elem())
+	return nil
+}
+
+func (r *ValueReceiver) Close() error {
+	r.ch.Close()
+	return nil
+}
+
 // SignalReceiver receives signals
 type SignalReceiver struct {
-	dec *Decoder
+	dec BufferDecoder
 	ch  chan os.Signal
 }
 
 // NewSignalReceiver creates a new signal receiver
-func NewSignalReceiver(ch chan os.Signal) SignalReceiver {
+func NewSignalReceiver(ch chan os.Signal, pool Pool) SignalReceiver {
 	return SignalReceiver{
-		dec: NewDecoder(),
+		dec: pool.NewBufferDecoder(),
 		ch:  ch,
 	}
 }
@@ -41,14 +84,14 @@ func (r SignalReceiver) Close() error {
 
 // StringReceiver receives strings
 type StringReceiver struct {
-	dec *Decoder
+	dec BufferDecoder
 	ch  chan string
 }
 
 // NewStringReceiver returns a StringReceiver
-func NewStringReceiver(ch chan string) StringReceiver {
+func NewStringReceiver(ch chan string, pool Pool) StringReceiver {
 	return StringReceiver{
-		dec: NewDecoder(),
+		dec: pool.NewBufferDecoder(),
 		ch:  ch,
 	}
 }

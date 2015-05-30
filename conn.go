@@ -1,8 +1,7 @@
 package mux
 
+// NetConn wraps net.Conn which communicates using gob
 import (
-	"bytes"
-	"encoding/gob"
 	"io"
 	"log"
 	"net"
@@ -16,62 +15,29 @@ type Conn interface {
 	Receive(t uint8, r Receiver)
 	Send(t uint8, e interface{}) error
 	Recv()
+	Pool() Pool
 	Shutdown()
 	IsShutdown() chan struct{}
 }
 
-// Encoder is used to encode values to bytes
-type Encoder struct {
-	*bytes.Buffer
-	*gob.Encoder
+// Receiver defines an interface for receiving
+type Receiver interface {
+	Receive(b []byte) error
+	Close() error
 }
 
-// NewEncoder creates a encoder
-func NewEncoder() *Encoder {
-	buf := new(bytes.Buffer)
-	enc := gob.NewEncoder(buf)
-
-	return &Encoder{
-		Buffer:  buf,
-		Encoder: enc,
-	}
-}
-
-// Decoder is used to decode bytes to values
-type Decoder struct {
-	*bytes.Buffer
-	*gob.Decoder
-}
-
-// NewDecoder creates a decoder
-func NewDecoder() *Decoder {
-	buf := new(bytes.Buffer)
-	dec := gob.NewDecoder(buf)
-
-	return &Decoder{
-		Buffer:  buf,
-		Decoder: dec,
-	}
-}
-
-// Frame represents transport
-type Frame struct {
-	Type uint8
-	Data []byte
-}
-
-// GobConn wraps net.Conn which communicates using gob
-type GobConn struct {
+// NetConn is a Conn using net.Conn for communication
+type NetConn struct {
 	// store the net.Conn to SetDeadlines
 	conn net.Conn
 
 	// used to encode data into frames
-	sendEnc  *Encoder
+	sendEnc  BufferEncoder
 	sendLock sync.Mutex
 
 	// encode and decode conn
-	enc *gob.Encoder
-	dec *gob.Decoder
+	enc Encoder
+	dec Decoder
 
 	// Store receivers for Frames
 	Receivers map[uint8]Receiver
@@ -84,38 +50,42 @@ type GobConn struct {
 	timeout time.Duration
 
 	logger *log.Logger
+
+	pool Pool
 }
 
-// NewDefaultGobConn returns a new GobConn using net.Conn and DefaultConfig
-func NewDefaultGobConn(conn net.Conn) (*GobConn, error) {
-	return NewGobConn(conn, DefaultConfig())
+// Frame represents transport
+type Frame struct {
+	Type uint8
+	Data []byte
 }
 
-// NewGobConn creates a new GobConn using the specified conn and config
-func NewGobConn(conn net.Conn, config *Config) (*GobConn, error) {
+// NewNetConn creates a new NetConn using the specified conn and config
+func NewNetConn(conn net.Conn, pool Pool, config *Config) (Conn, error) {
 	if err := config.Verify(); err != nil {
 		return nil, err
 	}
 
-	return &GobConn{
+	return &NetConn{
 		conn: conn,
 
-		sendEnc:  NewEncoder(),
+		sendEnc:  pool.NewBufferEncoder(),
 		sendLock: sync.Mutex{},
 
-		dec: gob.NewDecoder(conn),
-		enc: gob.NewEncoder(conn),
+		dec: pool.NewDecoder(conn),
+		enc: pool.NewEncoder(conn),
 
 		Receivers:  make(map[uint8]Receiver),
 		ShutdownCh: make(chan struct{}),
 
 		timeout: config.Timeout,
 		logger:  log.New(config.LogOutput, "", log.LstdFlags),
+		pool:    pool,
 	}, nil
 }
 
 // Send encodes a frame on conn using t and e
-func (c *GobConn) Send(t uint8, e interface{}) error {
+func (c *NetConn) Send(t uint8, e interface{}) error {
 	// Single threaded through here
 	c.sendLock.Lock()
 	c.sendEnc.Encode(e)
@@ -134,20 +104,14 @@ func (c *GobConn) Send(t uint8, e interface{}) error {
 	return c.enc.Encode(f)
 }
 
-// Receiver defines an interface for receiving
-type Receiver interface {
-	Receive(b []byte) error
-	Close() error
-}
-
 // Receive registers a receiver to receive t
-func (c *GobConn) Receive(t uint8, r Receiver) {
+func (c *NetConn) Receive(t uint8, r Receiver) {
 	c.Receivers[t] = r
 	c.logger.Printf("[DEBUG] Added receiver type %d\n", t)
 }
 
 // Recv listens for frames and sends them to a receiver
-func (c *GobConn) Recv() {
+func (c *NetConn) Recv() {
 	for {
 		var frame Frame
 		c.conn.SetReadDeadline(time.Now().Add(c.timeout))
@@ -183,12 +147,17 @@ func (c *GobConn) Recv() {
 }
 
 // IsShutdown provides a way to listen for this connection to shutdown
-func (c *GobConn) IsShutdown() chan struct{} {
+func (c *NetConn) IsShutdown() chan struct{} {
 	return c.ShutdownCh
 }
 
+// Pool returns the pool used by the Conn
+func (c *NetConn) Pool() Pool {
+	return c.pool
+}
+
 // Shutdown closes the gob connection
-func (c *GobConn) Shutdown() {
+func (c *NetConn) Shutdown() {
 	if c.isShutdown {
 		return
 	}

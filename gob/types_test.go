@@ -1,9 +1,11 @@
-package mux
+package gob
 
 import (
 	"errors"
 	"net"
 	"testing"
+
+	"github.com/doubledutch/mux"
 )
 
 func TestHappyClientServer(t *testing.T) {
@@ -11,6 +13,8 @@ func TestHappyClientServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	pool := new(Pool)
 
 	text := "hello world"
 
@@ -22,13 +26,13 @@ func TestHappyClientServer(t *testing.T) {
 		}
 
 		logCh := make(chan string, 1)
-		logR := NewStringReceiver(logCh)
+		logR := mux.NewReceiver(logCh, pool)
 
 		server, err := NewDefaultServer(conn)
 		if err != nil {
 			t.Fatal(err)
 		}
-		server.Receive(LogType, logR)
+		server.Receive(mux.LogType, logR)
 		go server.Recv()
 		actual := <-logCh
 		if actual != text {
@@ -48,7 +52,7 @@ func TestHappyClientServer(t *testing.T) {
 
 	go client.Recv()
 
-	if err := client.Send(LogType, text); err != nil {
+	if err := client.Send(mux.LogType, text); err != nil {
 		t.Fatal(err)
 	}
 
