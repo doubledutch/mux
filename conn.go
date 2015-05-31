@@ -123,7 +123,6 @@ func (c *conn) Recv() {
 		var frame Frame
 		c.conn.SetReadDeadline(time.Now().Add(c.timeout))
 		err := c.dec.Decode(&frame)
-		c.lgr.Debugf("Decode err: %s", err)
 		if err != nil {
 			if err == io.EOF || strings.Contains(err.Error(), "closed") || strings.Contains(err.Error(), "reset by peer") {
 				// This is the expected way for us to return

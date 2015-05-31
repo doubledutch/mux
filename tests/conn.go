@@ -116,7 +116,7 @@ func TimeoutSend(t *testing.T, pool mux.Pool, newConn NewConfigConn) {
 		t.Fatal(err)
 	}
 
-	timeout := 1 * time.Millisecond
+	timeout := 10 * time.Millisecond
 
 	config := &mux.Config{
 		Timeout: timeout,
