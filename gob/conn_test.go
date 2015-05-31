@@ -13,7 +13,7 @@ func Lager() lager.Lager {
 	return lager.NewLogLager(nil)
 }
 
-func TestNetConnection(t *testing.T) {
+func TestConnection(t *testing.T) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -32,7 +32,7 @@ func TestNetConnection(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		gConn, err := NewDefaultNetConn(conn)
+		gConn, err := NewDefaultConn(conn)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -52,7 +52,7 @@ func TestNetConnection(t *testing.T) {
 	// client
 	conn, err := net.Dial("tcp", l.Addr().String())
 
-	gConn, err := NewDefaultNetConn(conn)
+	gConn, err := NewDefaultConn(conn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,11 +91,10 @@ func TestShutdown(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gConn, err := NewDefaultNetConn(conn)
+	gConn, err := NewDefaultConn(conn)
 	if err != nil {
 		t.Fatal(err)
 	}
-	gConn.Shutdown()
 	gConn.Shutdown()
 }
 
@@ -120,7 +119,7 @@ func TestTimeoutSend(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		gConn, err := NewNetConn(conn, &mux.Config{
+		gConn, err := NewConn(conn, &mux.Config{
 			Timeout: timeout,
 			Lager:   Lager(),
 		})
@@ -144,7 +143,7 @@ func TestTimeoutSend(t *testing.T) {
 	// client
 	conn, err := net.Dial("tcp", l.Addr().String())
 
-	gConn, err := NewNetConn(conn, &mux.Config{
+	gConn, err := NewConn(conn, &mux.Config{
 		Timeout: timeout,
 		Lager:   Lager(),
 	})
@@ -178,7 +177,7 @@ func TestDroppedMessages(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		gConn, err := NewDefaultNetConn(conn)
+		gConn, err := NewDefaultConn(conn)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -188,7 +187,7 @@ func TestDroppedMessages(t *testing.T) {
 	// client
 	conn, err := net.Dial("tcp", l.Addr().String())
 
-	gConn, err := NewDefaultNetConn(conn)
+	gConn, err := NewDefaultConn(conn)
 	if err != nil {
 		t.Fatal(err)
 	}

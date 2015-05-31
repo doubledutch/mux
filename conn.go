@@ -13,11 +13,17 @@ import (
 
 // Conn defines a mux connection
 type Conn interface {
+	// Receive registers a receiver to receive t
 	Receive(t uint8, r Receiver)
+	// Send encodes a frame on conn using t and e
 	Send(t uint8, e interface{}) error
+	// Recv listens for frames and sends them to a receiver
 	Recv()
+	// Pool returns the pool used by the Conn
 	Pool() Pool
+	// Shutdown closes the gob connection
 	Shutdown()
+	// IsShutdown provides a way to listen for this connection to shutdown
 	IsShutdown() chan struct{}
 }
 
@@ -27,8 +33,8 @@ type Receiver interface {
 	Close() error
 }
 
-// NetConn is a Conn using net.Conn for communication
-type NetConn struct {
+// conn is a Conn using net.Conn for communication
+type conn struct {
 	// store the net.Conn to SetDeadlines
 	conn net.Conn
 
@@ -61,20 +67,20 @@ type Frame struct {
 	Data []byte
 }
 
-// NewNetConn creates a new NetConn using the specified conn and config
-func NewNetConn(conn net.Conn, pool Pool, config *Config) (Conn, error) {
+// NewConn creates a new NetConn using the specified conn and config
+func NewConn(netConn net.Conn, pool Pool, config *Config) (Conn, error) {
 	if err := config.Verify(); err != nil {
 		return nil, err
 	}
 
-	return &NetConn{
-		conn: conn,
+	return &conn{
+		conn: netConn,
 
 		sendEnc:  pool.NewBufferEncoder(),
 		sendLock: sync.Mutex{},
 
-		dec: pool.NewDecoder(conn),
-		enc: pool.NewEncoder(conn),
+		dec: pool.NewDecoder(netConn),
+		enc: pool.NewEncoder(netConn),
 
 		Receivers:  make(map[uint8]Receiver),
 		ShutdownCh: make(chan struct{}),
@@ -86,7 +92,7 @@ func NewNetConn(conn net.Conn, pool Pool, config *Config) (Conn, error) {
 }
 
 // Send encodes a frame on conn using t and e
-func (c *NetConn) Send(t uint8, e interface{}) error {
+func (c *conn) Send(t uint8, e interface{}) error {
 	// Single threaded through here
 	c.sendLock.Lock()
 	c.sendEnc.Encode(e)
@@ -106,13 +112,13 @@ func (c *NetConn) Send(t uint8, e interface{}) error {
 }
 
 // Receive registers a receiver to receive t
-func (c *NetConn) Receive(t uint8, r Receiver) {
+func (c *conn) Receive(t uint8, r Receiver) {
 	c.Receivers[t] = r
 	c.lgr.Debugf("Added receiver type %d\n", t)
 }
 
 // Recv listens for frames and sends them to a receiver
-func (c *NetConn) Recv() {
+func (c *conn) Recv() {
 	for {
 		var frame Frame
 		c.conn.SetReadDeadline(time.Now().Add(c.timeout))
@@ -148,17 +154,17 @@ func (c *NetConn) Recv() {
 }
 
 // IsShutdown provides a way to listen for this connection to shutdown
-func (c *NetConn) IsShutdown() chan struct{} {
+func (c *conn) IsShutdown() chan struct{} {
 	return c.ShutdownCh
 }
 
 // Pool returns the pool used by the Conn
-func (c *NetConn) Pool() Pool {
+func (c *conn) Pool() Pool {
 	return c.pool
 }
 
 // Shutdown closes the gob connection
-func (c *NetConn) Shutdown() {
+func (c *conn) Shutdown() {
 	if c.isShutdown {
 		return
 	}

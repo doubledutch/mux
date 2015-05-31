@@ -6,12 +6,14 @@ import (
 	"syscall"
 )
 
+// ValueReceiver uses reflection to send and receive values
 type ValueReceiver struct {
 	dec BufferDecoder
 	ch  reflect.Value
 	t   reflect.Type
 }
 
+// NewReceiver creates a new Receiver.
 func NewReceiver(ch interface{}, pool Pool) Receiver {
 	v := reflect.TypeOf(ch)
 

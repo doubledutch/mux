@@ -6,8 +6,9 @@ import (
 	"github.com/doubledutch/mux"
 )
 
+// NewDefaultServer creates a *mux.Client using gob encoding
 func NewDefaultServer(conn net.Conn) (*mux.Server, error) {
-	gc, err := NewDefaultNetConn(conn)
+	gc, err := NewDefaultConn(conn)
 	if err != nil {
 		return nil, err
 	}
@@ -15,8 +16,9 @@ func NewDefaultServer(conn net.Conn) (*mux.Server, error) {
 	return mux.NewServer(gc)
 }
 
+// NewDefaultClient creates a *mux.Client using gob encoding
 func NewDefaultClient(conn net.Conn) (*mux.Client, error) {
-	gc, err := NewDefaultNetConn(conn)
+	gc, err := NewDefaultConn(conn)
 	if err != nil {
 		return nil, err
 	}

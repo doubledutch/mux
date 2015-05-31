@@ -6,10 +6,12 @@ import (
 	"github.com/doubledutch/mux"
 )
 
-func NewDefaultNetConn(conn net.Conn) (mux.Conn, error) {
-	return mux.NewNetConn(conn, new(Pool), mux.DefaultConfig())
+// NewDefaultConn creates a new mux.Conn using gob encoding with default configuration
+func NewDefaultConn(conn net.Conn) (mux.Conn, error) {
+	return mux.NewConn(conn, new(Pool), mux.DefaultConfig())
 }
 
-func NewNetConn(conn net.Conn, config *mux.Config) (mux.Conn, error) {
-	return mux.NewNetConn(conn, new(Pool), config)
+// NewConn creates a new mux.Conn using gob encoding
+func NewConn(conn net.Conn, config *mux.Config) (mux.Conn, error) {
+	return mux.NewConn(conn, new(Pool), config)
 }
