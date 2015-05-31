@@ -3,35 +3,13 @@ package gob
 import (
 	"testing"
 
-	"github.com/doubledutch/mux"
+	"github.com/doubledutch/mux/benchmarks"
 )
 
 func BenchmarkStringReceiver(b *testing.B) {
-	ch := make(chan string, 1)
-
-	r := mux.NewStringReceiver(ch, new(Pool))
-
-	go func() {
-		for _ = range ch {
-		}
-	}()
-
-	for i := 0; i < b.N; i++ {
-		r.Receive([]byte("hello"))
-	}
+	benchmarks.StringReceiver(b, new(Pool))
 }
 
 func BenchmarkValueReceiver(b *testing.B) {
-	ch := make(chan string, 1)
-
-	r := mux.NewReceiver(ch, new(Pool))
-
-	go func() {
-		for _ = range ch {
-		}
-	}()
-
-	for i := 0; i < b.N; i++ {
-		r.Receive([]byte("hello"))
-	}
+	benchmarks.ValueReceiver(b, new(Pool))
 }
