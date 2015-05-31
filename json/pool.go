@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"net"
 
 	"github.com/doubledutch/mux"
 )
 
 type Pool struct {
-	BasePool
 }
 
 func (p *Pool) NewBufferEncoder() mux.BufferEncoder {
@@ -26,4 +26,16 @@ func (p *Pool) NewEncoder(w io.Writer) mux.Encoder {
 
 func (p *Pool) NewDecoder(r io.Reader) mux.Decoder {
 	return json.NewDecoder(r)
+}
+
+func (p *Pool) NewReceiver(ch interface{}) mux.Receiver {
+	return mux.NewReceiver(ch, p)
+}
+
+func (p *Pool) NewServer(conn net.Conn, config *mux.Config) (mux.Server, error) {
+	return NewServer(conn, config)
+}
+
+func (p *Pool) NewClient(conn net.Conn, config *mux.Config) (mux.Client, error) {
+	return NewClient(conn, config)
 }

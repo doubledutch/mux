@@ -11,7 +11,7 @@ func Receiver(t *testing.T, pool mux.Pool) {
 	strCh := make(chan string, 1)
 	expected := "hello world"
 
-	strR := NewReceiver(strCh)
+	strR := pool.NewReceiver(strCh)
 	defer strR.Close()
 
 	enc := pool.NewBufferEncoder()

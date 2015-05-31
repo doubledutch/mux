@@ -25,3 +25,21 @@ func NewDefaultClient(conn net.Conn) (mux.Client, error) {
 
 	return mux.NewClient(gc)
 }
+
+func NewClient(conn net.Conn, config *mux.Config) (mux.Client, error) {
+	gc, err := NewConn(conn, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return mux.NewClient(gc)
+}
+
+func NewServer(conn net.Conn, config *mux.Config) (mux.Server, error) {
+	gc, err := NewConn(conn, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return mux.NewServer(gc)
+}

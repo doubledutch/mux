@@ -2,8 +2,7 @@ package mux
 
 import (
 	"io"
-
-	"github.com/doubledutch/mux"
+	"net"
 )
 
 // Encoder encodes
@@ -43,10 +42,6 @@ type Pool interface {
 	NewEncoder(w io.Writer) Encoder
 	NewDecoder(r io.Reader) Decoder
 	NewReceiver(ch interface{}) Receiver
-}
-
-type BasePool struct{}
-
-func (p *BasePool) NewReceiver(ch interface{}) mux.Receiver {
-	return mux.NewReceiver(ch, p)
+	NewClient(conn net.Conn, config *Config) (Client, error)
+	NewServer(conn net.Conn, config *Config) (Server, error)
 }
