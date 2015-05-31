@@ -31,7 +31,7 @@ func HappyClientServer(t *testing.T, pool mux.Pool, newServer NewServer, newClie
 		}
 
 		logCh := make(chan string, 1)
-		logR := mux.NewReceiver(logCh, pool)
+		logR := pool.NewReceiver(logCh)
 
 		server, err := newServer(conn)
 		if err != nil {

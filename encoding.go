@@ -1,6 +1,10 @@
 package mux
 
-import "io"
+import (
+	"io"
+
+	"github.com/doubledutch/mux"
+)
 
 // Encoder encodes
 type Encoder interface {
@@ -38,4 +42,11 @@ type Pool interface {
 	NewBufferDecoder() BufferDecoder
 	NewEncoder(w io.Writer) Encoder
 	NewDecoder(r io.Reader) Decoder
+	NewReceiver(ch interface{}) Receiver
+}
+
+type BasePool struct{}
+
+func (p *BasePool) NewReceiver(ch interface{}) mux.Receiver {
+	return mux.NewReceiver(ch, p)
 }

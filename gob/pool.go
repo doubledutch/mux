@@ -9,6 +9,7 @@ import (
 )
 
 type Pool struct {
+	BasePool
 }
 
 func (p *Pool) NewBufferEncoder() mux.BufferEncoder {

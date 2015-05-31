@@ -48,7 +48,7 @@ func Connection(t *testing.T, pool mux.Pool, newConn NewConn) {
 		}
 
 		recvr := make(chan string, 1)
-		strR := mux.NewReceiver(recvr, pool)
+		strR := pool.NewReceiver(recvr)
 		mConn.Receive(logType, strR)
 		go mConn.Recv()
 		actual := <-recvr
@@ -68,7 +68,7 @@ func Connection(t *testing.T, pool mux.Pool, newConn NewConn) {
 	}
 
 	recvr := make(chan string, 1)
-	strR := mux.NewReceiver(recvr, pool)
+	strR := pool.NewReceiver(recvr)
 	mConn.Receive(errType, strR)
 	go mConn.Recv()
 
@@ -141,7 +141,7 @@ func TimeoutSend(t *testing.T, pool mux.Pool, newConn NewConfigConn) {
 
 		recvr := make(chan string, 1)
 
-		strR := mux.NewReceiver(recvr, pool)
+		strR := pool.NewReceiver(recvr)
 		mConn.Receive(logType, strR)
 		go mConn.Recv()
 
@@ -162,7 +162,7 @@ func TimeoutSend(t *testing.T, pool mux.Pool, newConn NewConfigConn) {
 	}
 
 	recvr := make(chan string, 1)
-	strR := mux.NewReceiver(recvr, pool)
+	strR := pool.NewReceiver(recvr)
 	mConn.Receive(errType, strR)
 	go mConn.Recv()
 
