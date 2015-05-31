@@ -3,11 +3,12 @@ package mux
 // NetConn wraps net.Conn which communicates using gob
 import (
 	"io"
-	"log"
 	"net"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/doubledutch/lager"
 )
 
 // Conn defines a mux connection
@@ -49,7 +50,7 @@ type NetConn struct {
 	// timeout for receiving frames
 	timeout time.Duration
 
-	logger *log.Logger
+	lgr lager.Lager
 
 	pool Pool
 }
@@ -79,7 +80,7 @@ func NewNetConn(conn net.Conn, pool Pool, config *Config) (Conn, error) {
 		ShutdownCh: make(chan struct{}),
 
 		timeout: config.Timeout,
-		logger:  log.New(config.LogOutput, "", log.LstdFlags),
+		lgr:     config.Lager,
 		pool:    pool,
 	}, nil
 }
@@ -99,7 +100,7 @@ func (c *NetConn) Send(t uint8, e interface{}) error {
 		Type: t,
 		Data: d,
 	}
-	c.logger.Printf("[DEBUG] Sending frame: %v\n", f)
+	c.lgr.Debugf("Sending frame: %v\n", f)
 
 	return c.enc.Encode(f)
 }
@@ -107,7 +108,7 @@ func (c *NetConn) Send(t uint8, e interface{}) error {
 // Receive registers a receiver to receive t
 func (c *NetConn) Receive(t uint8, r Receiver) {
 	c.Receivers[t] = r
-	c.logger.Printf("[DEBUG] Added receiver type %d\n", t)
+	c.lgr.Debugf("Added receiver type %d\n", t)
 }
 
 // Recv listens for frames and sends them to a receiver
@@ -133,10 +134,10 @@ func (c *NetConn) Recv() {
 				return
 			}
 		}
-		c.logger.Printf("[DEBUG] Received frame: %v\n", frame)
+		c.lgr.Debugf("Received frame: %v\n", frame)
 		r, ok := c.Receivers[frame.Type]
 		if !ok {
-			c.logger.Printf("[WARN] dropping frame %d\n", frame.Type)
+			c.lgr.Warnf("dropping frame %d\n", frame.Type)
 			continue
 		}
 		err = r.Receive(frame.Data)
@@ -161,7 +162,7 @@ func (c *NetConn) Shutdown() {
 	if c.isShutdown {
 		return
 	}
-	c.logger.Println("[INFO] Shutting down")
+	c.lgr.Infof("Shutting down")
 	c.isShutdown = true
 	// Notify that we're shutdown
 	close(c.ShutdownCh)

@@ -2,9 +2,9 @@ package mux
 
 import (
 	"errors"
-	"io"
-	"os"
 	"time"
+
+	"github.com/doubledutch/lager"
 )
 
 const (
@@ -19,8 +19,8 @@ const (
 var (
 	// ErrInvalidTimeout defines an error for an invalid Config Timeout value
 	ErrInvalidTimeout = errors.New("Invalid Config Timeout")
-	// ErrInvalidLogOutput defines an error for an invalid Config LogOutput value
-	ErrInvalidLogOutput = errors.New("Invalid LogOutput")
+	// ErrInvalidLager defines an error for an invalid Config Lager value
+	ErrInvalidLager = errors.New("Invalid Lager")
 )
 
 // Config configures a Server or Client
@@ -28,8 +28,8 @@ type Config struct {
 	// Timeout for receiving frames
 	Timeout time.Duration
 
-	// LogOutput is used to control the log destination
-	LogOutput io.Writer
+	// Lager is used to control the log destination
+	Lager lager.Lager
 }
 
 // Verify validates the config
@@ -38,8 +38,8 @@ func (c *Config) Verify() error {
 		return ErrInvalidTimeout
 	}
 
-	if c.LogOutput == nil {
-		return ErrInvalidLogOutput
+	if c.Lager == nil {
+		return ErrInvalidLager
 	}
 
 	return nil
@@ -48,8 +48,8 @@ func (c *Config) Verify() error {
 // DefaultConfig creates config with default settings
 func DefaultConfig() *Config {
 	return &Config{
-		Timeout:   100 * time.Millisecond,
-		LogOutput: os.Stderr,
+		Timeout: 100 * time.Millisecond,
+		Lager:   lager.NewLogLager(nil),
 	}
 }
 

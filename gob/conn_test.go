@@ -2,12 +2,16 @@ package gob
 
 import (
 	"net"
-	"os"
 	"testing"
 	"time"
 
+	"github.com/doubledutch/lager"
 	"github.com/doubledutch/mux"
 )
+
+func Lager() lager.Lager {
+	return lager.NewLogLager(nil)
+}
 
 func TestNetConnection(t *testing.T) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
@@ -117,8 +121,8 @@ func TestTimeoutSend(t *testing.T) {
 		}
 
 		gConn, err := NewNetConn(conn, &mux.Config{
-			Timeout:   timeout,
-			LogOutput: os.Stderr,
+			Timeout: timeout,
+			Lager:   Lager(),
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -141,8 +145,8 @@ func TestTimeoutSend(t *testing.T) {
 	conn, err := net.Dial("tcp", l.Addr().String())
 
 	gConn, err := NewNetConn(conn, &mux.Config{
-		Timeout:   timeout,
-		LogOutput: os.Stderr,
+		Timeout: timeout,
+		Lager:   Lager(),
 	})
 	if err != nil {
 		t.Fatal(err)
