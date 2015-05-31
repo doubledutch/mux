@@ -1,28 +1,21 @@
-/*
-Copyright 2015 Doubledutch
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package mux
+package tests
 
 import (
 	"errors"
 	"net"
 	"testing"
+
+	"github.com/doubledutch/mux"
 )
 
-func TestHappyClientServer(t *testing.T) {
+// NewServer defines a func for creating new servers
+type NewServer func(conn net.Conn) (mux.Server, error)
+
+// NewClient defines a func for creating new clients
+type NewClient func(conn net.Conn) (mux.Client, error)
+
+// HappyClientServer tests client server communication
+func HappyClientServer(t *testing.T, pool mux.Pool, newServer NewServer, newClient NewClient) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -38,13 +31,13 @@ func TestHappyClientServer(t *testing.T) {
 		}
 
 		logCh := make(chan string, 1)
-		logR := NewStringReceiver(logCh)
+		logR := pool.NewReceiver(logCh)
 
-		server, err := NewDefaultServer(conn)
+		server, err := newServer(conn)
 		if err != nil {
 			t.Fatal(err)
 		}
-		server.Receive(LogType, logR)
+		server.Receive(mux.LogType, logR)
 		go server.Recv()
 		actual := <-logCh
 		if actual != text {
@@ -57,14 +50,14 @@ func TestHappyClientServer(t *testing.T) {
 	// client
 	conn, err := net.Dial("tcp", l.Addr().String())
 
-	client, err := NewDefaultClient(conn)
+	client, err := newClient(conn)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	go client.Recv()
 
-	if err := client.Send(LogType, text); err != nil {
+	if err := client.Send(mux.LogType, text); err != nil {
 		t.Fatal(err)
 	}
 
@@ -73,7 +66,8 @@ func TestHappyClientServer(t *testing.T) {
 	}
 }
 
-func TestClientServerErr(t *testing.T) {
+// ClientServerErr tests client server communication during error
+func ClientServerErr(t *testing.T, pool mux.Pool, newServer NewServer, newClient NewClient) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -88,7 +82,7 @@ func TestClientServerErr(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		server, err := NewDefaultServer(conn)
+		server, err := newServer(conn)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -102,7 +96,7 @@ func TestClientServerErr(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	client, err := NewDefaultClient(conn)
+	client, err := newClient(conn)
 	if err != nil {
 		t.Fatal(err)
 	}
