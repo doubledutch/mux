@@ -2,6 +2,7 @@ package tests
 
 import (
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -9,14 +10,21 @@ import (
 	"github.com/doubledutch/mux"
 )
 
+// Lager returns a new test Lager
 func Lager() lager.Lager {
-	return lager.NewLogLager(nil)
+	return lager.NewLogLager(&lager.LogConfig{
+		Levels: lager.LevelsFromString(""),
+		Output: os.Stderr,
+	})
 }
 
+// NewConn defines a func for creating a mux.Conn with default configuration
 type NewConn func(conn net.Conn) (mux.Conn, error)
 
+// NewConfigConn defines a func for creating a new Conn with configuration
 type NewConfigConn func(conn net.Conn, config *mux.Config) (mux.Conn, error)
 
+// Connection is a basic Conn test
 func Connection(t *testing.T, pool mux.Pool, newConn NewConn) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -73,6 +81,7 @@ func Connection(t *testing.T, pool mux.Pool, newConn NewConn) {
 	conn.Close()
 }
 
+// Shutdown tests shutting down a mux.Conn
 func Shutdown(t *testing.T, newConn NewConn) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -100,6 +109,7 @@ func Shutdown(t *testing.T, newConn NewConn) {
 	mConn.Shutdown()
 }
 
+// TimeoutSend tests
 func TimeoutSend(t *testing.T, pool mux.Pool, newConn NewConfigConn) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -107,6 +117,11 @@ func TimeoutSend(t *testing.T, pool mux.Pool, newConn NewConfigConn) {
 	}
 
 	timeout := 1 * time.Millisecond
+
+	config := &mux.Config{
+		Timeout: timeout,
+		Lager:   Lager(),
+	}
 
 	logType := uint8(1)
 	errType := uint8(2)
@@ -119,10 +134,7 @@ func TimeoutSend(t *testing.T, pool mux.Pool, newConn NewConfigConn) {
 			t.Fatal(err)
 		}
 
-		mConn, err := newConn(conn, &mux.Config{
-			Timeout: timeout,
-			Lager:   Lager(),
-		})
+		mConn, err := newConn(conn, config)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -132,6 +144,7 @@ func TimeoutSend(t *testing.T, pool mux.Pool, newConn NewConfigConn) {
 		strR := mux.NewReceiver(recvr, pool)
 		mConn.Receive(logType, strR)
 		go mConn.Recv()
+
 		actual := <-recvr
 		if actual != text {
 			t.Fatalf("'%s' != '%s'", actual, text)
@@ -143,10 +156,7 @@ func TimeoutSend(t *testing.T, pool mux.Pool, newConn NewConfigConn) {
 	// client
 	conn, err := net.Dial("tcp", l.Addr().String())
 
-	mConn, err := newConn(conn, &mux.Config{
-		Timeout: timeout,
-		Lager:   Lager(),
-	})
+	mConn, err := newConn(conn, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,6 +175,7 @@ func TimeoutSend(t *testing.T, pool mux.Pool, newConn NewConfigConn) {
 	mConn.Shutdown()
 }
 
+// DroppedMessages tests a mux.Conn for handling dropped messages
 func DroppedMessages(t *testing.T, pool mux.Pool, newConn NewConn) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

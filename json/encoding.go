@@ -1,8 +1,8 @@
-package gob
+package json
 
 import (
 	"bytes"
-	"encoding/gob"
+	"encoding/json"
 
 	"github.com/doubledutch/mux"
 )
@@ -10,12 +10,12 @@ import (
 // BufferEncoder is used to encode values to bytes
 type BufferEncoder struct {
 	*bytes.Buffer
-	*gob.Encoder
+	mux.Encoder
 }
 
 // NewBufferEncoder creates a encoder
 func NewBufferEncoder(buf *bytes.Buffer) mux.BufferEncoder {
-	enc := gob.NewEncoder(buf)
+	enc := json.NewEncoder(buf)
 
 	return &BufferEncoder{
 		Buffer:  buf,
@@ -26,12 +26,12 @@ func NewBufferEncoder(buf *bytes.Buffer) mux.BufferEncoder {
 // BufferDecoder is used to decode bytes to values
 type BufferDecoder struct {
 	*bytes.Buffer
-	*gob.Decoder
+	mux.Decoder
 }
 
 // NewBufferDecoder creates a decoder
 func NewBufferDecoder(buf *bytes.Buffer) mux.BufferDecoder {
-	dec := gob.NewDecoder(buf)
+	dec := json.NewDecoder(buf)
 
 	return &BufferDecoder{
 		Buffer:  buf,

@@ -1,4 +1,4 @@
-package gob
+package json
 
 import (
 	"net"
@@ -6,7 +6,7 @@ import (
 	"github.com/doubledutch/mux"
 )
 
-// NewDefaultServer creates a *mux.Client using gob encoding
+// NewDefaultServer creates a mux.Client using json encoding
 func NewDefaultServer(conn net.Conn) (mux.Server, error) {
 	gc, err := NewDefaultConn(conn)
 	if err != nil {
@@ -16,7 +16,7 @@ func NewDefaultServer(conn net.Conn) (mux.Server, error) {
 	return mux.NewServer(gc)
 }
 
-// NewDefaultClient creates a *mux.Client using gob encoding
+// NewDefaultClient creates a mux.Client using json encoding
 func NewDefaultClient(conn net.Conn) (mux.Client, error) {
 	gc, err := NewDefaultConn(conn)
 	if err != nil {

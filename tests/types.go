@@ -9,10 +9,10 @@ import (
 )
 
 // NewServer defines a func for creating new servers
-type NewServer func(conn net.Conn) (*mux.Server, error)
+type NewServer func(conn net.Conn) (mux.Server, error)
 
 // NewClient defines a func for creating new clients
-type NewClient func(conn net.Conn) (*mux.Client, error)
+type NewClient func(conn net.Conn) (mux.Client, error)
 
 // HappyClientServer tests client server communication
 func HappyClientServer(t *testing.T, pool mux.Pool, newServer NewServer, newClient NewClient) {

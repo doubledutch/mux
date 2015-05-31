@@ -123,9 +123,11 @@ func (c *conn) Recv() {
 		var frame Frame
 		c.conn.SetReadDeadline(time.Now().Add(c.timeout))
 		err := c.dec.Decode(&frame)
+		c.lgr.Debugf("Decode err: %s", err)
 		if err != nil {
 			if err == io.EOF || strings.Contains(err.Error(), "closed") || strings.Contains(err.Error(), "reset by peer") {
 				// This is the expected way for us to return
+				c.lgr.Infof("Recv loop disconnected from %s", c.conn.RemoteAddr())
 				return
 			}
 			if err, ok := err.(*net.OpError); ok && err.Timeout() {
@@ -136,7 +138,7 @@ func (c *conn) Recv() {
 					continue
 				}
 			} else {
-				// Unexpected error
+				c.lgr.Errorf("Unexpected net.OpError: %s", err)
 				return
 			}
 		}
@@ -148,7 +150,7 @@ func (c *conn) Recv() {
 		}
 		err = r.Receive(frame.Data)
 		if err != nil {
-			// The handler returns an error.. what now?
+			c.lgr.Errorf("Receive error %s while receiving %s", err, frame.Data)
 		}
 	}
 }
