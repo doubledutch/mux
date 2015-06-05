@@ -6,6 +6,10 @@ import (
 	"github.com/doubledutch/mux/tests"
 )
 
-func TestReceiver(t *testing.T) {
-	tests.Receiver(t, new(Pool))
+func TestStringReceiver(t *testing.T) {
+	tests.StringReceiver(t, new(Pool))
+}
+
+func TestSignalReceiver(t *testing.T) {
+	tests.SignalReceiver(t, new(Pool))
 }

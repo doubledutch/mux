@@ -13,7 +13,7 @@ import (
 // Lager returns a new test Lager
 func Lager() lager.Lager {
 	return lager.NewLogLager(&lager.LogConfig{
-		Levels: lager.LevelsFromString(""),
+		Levels: lager.LevelsFromString(os.Getenv("LOG_LEVELS")),
 		Output: os.Stderr,
 	})
 }
