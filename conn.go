@@ -126,7 +126,7 @@ func (c *conn) Recv() {
 		if err != nil {
 			if err == io.EOF || strings.Contains(err.Error(), "closed") || strings.Contains(err.Error(), "reset by peer") {
 				// This is the expected way for us to return
-				c.lgr.Infof("Recv loop disconnected from %s", c.conn.RemoteAddr())
+				c.lgr.Debugf("Recv loop disconnected from %s", c.conn.RemoteAddr())
 				return
 			}
 			if err, ok := err.(*net.OpError); ok && err.Timeout() {
